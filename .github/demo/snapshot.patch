@@ -1,0 +1,23 @@
+diff --git a/build.gradle.kts b/build.gradle.kts
+index e8c95d07d..9eb48f2fa 100644
+--- a/build.gradle.kts
++++ b/build.gradle.kts
+@@ -26,7 +26,7 @@ plugins {
+ 
+ group = "com.google.genai"
+ 
+-version = "1.6.0" // {x-version-update:google-genai-kotlin:current}
++version = "1.7.0-SNAPSHOT" // {x-version-update:google-genai-kotlin:current}
+ 
+ if (project.projectDir.absolutePath.startsWith("/google/src/cloud")) {
+   val tempRoot = File(System.getProperty("java.io.tmpdir"), "google_genai_build")
+diff --git a/versions.txt b/versions.txt
+index 3ed45fa67..d120a2331 100644
+--- a/versions.txt
++++ b/versions.txt
+@@ -1,4 +1,4 @@
+ # Format:
+ # module:released-version:current-version
+ 
+-google-genai-kotlin:1.6.0:1.6.0
++google-genai-kotlin:1.6.0:1.7.0-SNAPSHOT

@@ -1,0 +1,61 @@
+# Demo only (Duck Duck Demo, genai-release). What release-please does upstream
+# once its release PR merges: tag the merge and publish the GitHub release with
+# the release notes.
+# Then it opens the -SNAPSHOT PR, as release-please does for googleapis/kotlin-genai#200.
+name: Demo - release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+  actions: write
+jobs:
+  release:
+    if: github.repository == 'speedstorm1/kotlin-genai'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      F: .github/demo/release.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/
+            /build.gradle.kts
+            /versions.txt
+          sparse-checkout-cone-mode: false
+      - name: Is this the release PR's merge?
+        id: which
+        run: |
+          title=$(jq -r .pr.title "$F")
+          subject=$(git log -1 --format=%s)
+          case "$subject" in
+            "$title (#"*) echo "release=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Not the release PR's merge: $subject" ;;
+          esac
+      - name: Publish the GitHub release
+        if: steps.which.outputs.release == 'true'
+        run: |
+          jq -r .release.body "$F" > notes.md
+          gh release create "$(jq -r .release.tag "$F")" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "$(jq -r .release.name "$F")" \
+            --notes-file notes.md
+      - name: Open the -SNAPSHOT PR
+        if: steps.which.outputs.release == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git apply --index .github/demo/snapshot.patch
+          title=$(jq -r .snapshot.title "$F")
+          head=$(jq -r .pr.head_ref "$F")
+          git commit -q -m "$title"
+          git push -f origin "HEAD:refs/heads/$head"
+          jq -r .snapshot.body "$F" > body.md
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$head" \
+            --title "$title" --body-file body.md --label "autorelease: snapshot"
+          # The tool merges a snapshot PR only once a check has reported on it.
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" \
+            -f state=success -f context=demo/snapshot \
+            -f description="Opened by demo-release.yml in place of release-please"
